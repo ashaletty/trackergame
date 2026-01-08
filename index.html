@@ -6,52 +6,53 @@
     <title>Hygiene App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #0b071a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        body { background: #0b071a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 30px; }
         .card { 
-            background: #1e143a; padding: 20px; border-radius: 20px; 
+            background: linear-gradient(145deg, #1e143a, #110925);
+            padding: 25px 10px; border-radius: 20px; 
             border: 1px solid #8e2de2; font-size: 2rem; cursor: pointer;
-            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(142, 45, 226, 0.3);
         }
         .card:active { transform: scale(0.9); background: #8e2de2; }
-        .status { margin-top: 20px; color: #8e2de2; font-weight: bold; }
+        h2 { color: #8e2de2; text-shadow: 0 0 10px rgba(142, 45, 226, 0.5); }
     </style>
 </head>
 <body>
-    <h2>Гигиена</h2>
+    <h2>ГИГИЕНА ТРЕКЕР</h2>
+    
     <div class="grid">
-        <div class="card" onclick="sendAction('Руки', '👐')">👐</div>
-        <div class="card" onclick="sendAction('Зубы', '🦷')">🦷</div>
-        <div class="card" onclick="sendAction('Душ', '🚿')">🚿</div>
-        <div class="card" onclick="sendAction('Лицо', '🧼')">🧼</div>
-        <div class="card" onclick="sendAction('Ванна', '🛁')">🛁</div>
-        <div class="card" onclick="sendAction('Голова', '🧴')">🧴</div>
+        <div class="card" onclick="clickAction('Руки', '👐')">👐</div>
+        <div class="card" onclick="clickAction('Зубы', '🦷')">🦷</div>
+        <div class="card" onclick="clickAction('Душ', '🚿')">🚿</div>
+        <div class="card" onclick="clickAction('Лицо', '🧼')">🧼</div>
+        <div class="card" onclick="clickAction('Ванна', '🛁')">🛁</div>
+        <div class="card" onclick="clickAction('Голова', '🧴')">🧴</div>
     </div>
-    <div id="status" class="status">Выбери действие</div>
 
     <script>
+        // Инициализируем Telegram Web App
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Раскрываем на весь экран
+        tg.expand(); // Раскрываем окно
 
-        function sendAction(name, emoji) {
-            // Вибрация
+        function clickAction(name, icon) {
+            // 1. Вибрируем (для тактильного отклика)
             tg.HapticFeedback.impactOccurred('medium');
-            
-            // Формируем данные для бота
-            const data = {
+
+            // 2. Создаем "пакет" данных для отправки
+            const result = JSON.stringify({
                 action: "mark",
                 type: name,
-                icon: emoji
-            };
+                icon: icon
+            });
 
-            // ОТПРАВЛЯЕМ ДАННЫЕ БОТУ
-            tg.sendData(JSON.stringify(data));
-            
-            document.getElementById('status').innerText = "Записываю: " + name + "...";
-            
-            // Закрываем приложение через секунду
-            setTimeout(() => { tg.close(); }, 1000);
+            // 3. ОТПРАВЛЯЕМ БОТУ (Это самая важная команда!)
+            tg.sendData(result);
+
+            // 4. Закрываем приложение, чтобы вернуться в чат
+            tg.close();
         }
     </script>
 </body>
 </html>
+

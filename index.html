@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hygiene Tracker Pro</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b071a;
+            --card-bg: rgba(25, 18, 45, 0.85);
+            --accent-purple: #8e2de2;
+            --accent-blue: #4a00e0;
+            --text-color: #ffffff;
+            --glow: 0 0 15px rgba(142, 45, 226, 0.5);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', -apple-system, sans-serif;
+            margin: 0; padding: 20px; padding-bottom: 100px;
+            overflow-x: hidden;
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .user-info h2 { margin: 0; font-size: 1.2rem; font-weight: 400; }
+        .streak-info { color: #ff9d00; font-weight: bold; font-size: 0.9rem; text-shadow: var(--glow); }
+
+        .section-title {
+            font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;
+            margin: 20px 0 10px 0; color: rgba(255,255,255,0.6);
+            text-align: center;
+        }
+
+        /* Сетка действий */
+        .actions-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            background: var(--card-bg); padding: 20px; border-radius: 24px;
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
+        }
+
+        .action-card {
+            background: linear-gradient(145deg, #1e143a, #110925);
+            border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);
+            aspect-ratio: 1/1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 8px;
+            transition: 0.3s;
+        }
+
+        .action-card:active { transform: scale(0.9); border-color: var(--accent-purple); }
+        .action-card span { font-size: 1.5rem; }
+
+        /* График */
+        .stats-container {
+            background: var(--card-bg); border-radius: 24px; padding: 20px;
+            margin-top: 20px; border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Награды */
+        .awards-row {
+            display: flex; justify-content: space-around;
+            background: var(--card-bg); border-radius: 24px; padding: 20px;
+        }
+        .award { width: 45px; height: 45px; filter: grayscale(1); opacity: 0.3; }
+        .award.active { filter: none; opacity: 1; transform: scale(1.1); }
+
+        /* Навигация */
+        .nav-bar {
+            position: fixed; bottom: 20px; left: 20px; right: 20px;
+            background: rgba(30, 20, 50, 0.95); backdrop-filter: blur(10px);
+            border-radius: 30px; display: flex; justify-content: space-around;
+            padding: 15px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .nav-item { font-size: 1.2rem; opacity: 0.5; }
+        .nav-item.active { opacity: 1; color: var(--accent-purple); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="user-info">
+            <h2 id="userName">Привет, Игрок</h2>
+        </div>
+        <div class="streak-info">🔥 Серия: 12 дней</div>
+    </div>
+
+    <div class="section-title">Гигиена сегодня</div>
+    <div class="actions-grid">
+        <div class="action-card" onclick="vibrate()"><span>👐</span></div>
+        <div class="action-card" onclick="vibrate()"><span>🦷</span></div>
+        <div class="action-card" onclick="vibrate()"><span>🚿</span></div>
+        <div class="action-card" onclick="vibrate()"><span>💪</span></div>
+        <div class="action-card" onclick="vibrate()"><span>🛁</span></div>
+        <div class="action-card" onclick="vibrate()"><span>🧴</span></div>
+    </div>
+
+    <div class="section-title">Активность</div>
+    <div class="stats-container">
+        <canvas id="activityChart"></canvas>
+    </div>
+
+    <div class="section-title">Награды</div>
+    <div class="awards-row">
+        <img src="https://cdn-icons-png.flaticon.com/512/5911/5911361.png" class="award active">
+        <img src="https://cdn-icons-png.flaticon.com/512/5911/5911356.png" class="award active">
+        <img src="https://cdn-icons-png.flaticon.com/512/1021/1021163.png" class="award active">
+        <img src="https://cdn-icons-png.flaticon.com/512/2573/2573523.png" class="award">
+        <img src="https://cdn-icons-png.flaticon.com/512/2573/2573523.png" class="award">
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-item active">🏠</div>
+        <div class="nav-item">👤</div>
+        <div class="nav-item">📊</div>
+        <div class="nav-item">🏆</div>
+        <div class="nav-item">⚙️</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.backgroundColor = '#0b071a';
+        tg.headerColor = '#0b071a';
+
+        document.getElementById('userName').innerText = "Привет, " + (tg.initDataUnsafe.user?.first_name || "Devil");
+
+        function vibrate() {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+
+        // Инициализация графика
+        const ctx = document.getElementById('activityChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'],
+                datasets: [{
+                    data: [10, 25, 15, 30, 45, 35, 55],
+                    borderColor: '#8e2de2',
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ffffff',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: (context) => {
+                        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                        gradient.addColorStop(0, 'rgba(142, 45, 226, 0.4)');
+                        gradient.addColorStop(1, 'rgba(142, 45, 226, 0)');
+                        return gradient;
+                    }
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { display: false },
+                    x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)' } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

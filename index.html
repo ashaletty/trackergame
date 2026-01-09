@@ -2,57 +2,194 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hygiene App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hygiene RPG Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        body { background: #0b071a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 30px; }
-        .card { 
-            background: linear-gradient(145deg, #1e143a, #110925);
-            padding: 25px 10px; border-radius: 20px; 
-            border: 1px solid #8e2de2; font-size: 2rem; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(142, 45, 226, 0.3);
-        }
-        .card:active { transform: scale(0.9); background: #8e2de2; }
-        h2 { color: #8e2de2; text-shadow: 0 0 10px rgba(142, 45, 226, 0.5); }
+        :root { --p-glow: #8e2de2; --bg: #0b071a; --card: rgba(25, 15, 50, 0.9); --gold: #ffd700; --rare: #0088cc; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 90px; overflow: hidden; }
+        .glass { background: var(--card); border: 1px solid rgba(142, 45, 226, 0.3); border-radius: 20px; backdrop-filter: blur(10px); }
+        .container { padding: 15px; height: 100vh; display: none; box-sizing: border-box; flex-direction: column; }
+        .container.active { display: flex; animation: fadeIn 0.4s; }
+
+        /* HEADER */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .xp-bar { width: 120px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 5px; border: 1px solid #333; }
+        .xp-fill { width: 30%; height: 100%; background: linear-gradient(90deg, var(--p-glow), #4a00e0); box-shadow: 0 0 10px var(--p-glow); transition: 1s; }
+
+        /* CHARACTER WORLD */
+        .world { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .platform { width: 200px; height: 50px; background: radial-gradient(ellipse, var(--p-glow) 0%, transparent 70%); border-radius: 50%; position: absolute; bottom: 80px; opacity: 0.5; animation: pulse 2s infinite; }
+        .character { font-size: 100px; z-index: 2; filter: drop-shadow(0 0 15px var(--p-glow)); animation: float 3s ease-in-out infinite; }
+        
+        /* SIDE BUTTONS */
+        .side-menu { position: absolute; width: 100%; top: 20%; display: flex; justify-content: space-between; padding: 0 15px; box-sizing: border-box; }
+        .btn-circle { width: 55px; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-label { font-size: 8px; color: #888; margin-top: 2px; }
+
+        /* TRACKER DRAWER */
+        .tracker-area { margin-top: auto; padding: 15px; border-radius: 25px 25px 0 0; background: linear-gradient(to top, #000, var(--card)); }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        .node { padding: 15px 5px; text-align: center; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); }
+
+        /* BOX OPENING & EFFECTS */
+        #box-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; flex-direction:column; align-items:center; justify-content:center; }
+        .screen-flash { position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:2500; animation: flash 0.6s forwards; }
+        @keyframes flash { 0% { opacity:0.8; } 100% { opacity:0; } }
+        .spark { position: absolute; width: 5px; height: 5px; background: gold; border-radius: 50%; pointer-events: none; }
+
+        /* NAVIGATION */
+        .nav { position: fixed; bottom: 0; width: 100%; background: #070412; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #222; }
+        .nav-btn { font-size: 24px; opacity: 0.3; transition: 0.3s; }
+        .nav-btn.active { opacity: 1; color: var(--p-glow); }
+
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.3); opacity: 0.6; } }
     </style>
 </head>
 <body>
-    <h2>ГИГИЕНА ТРЕКЕР</h2>
-    
-    <div class="grid">
-        <div class="card" onclick="clickAction('Руки', '👐')">👐</div>
-        <div class="card" onclick="clickAction('Зубы', '🦷')">🦷</div>
-        <div class="card" onclick="clickAction('Душ', '🚿')">🚿</div>
-        <div class="card" onclick="clickAction('Лицо', '🧼')">🧼</div>
-        <div class="card" onclick="clickAction('Ванна', '🛁')">🛁</div>
-        <div class="card" onclick="clickAction('Голова', '🧴')">🧴</div>
+
+<div id="fx-layer" style="pointer-events:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:3000;"></div>
+
+<div id="home" class="container active">
+    <div class="top-bar">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="glass" style="width:45px; height:45px; display:flex; align-items:center; justify-content:center; font-size:20px;">👤</div>
+            <div><b>Devil</b> <span style="color:#ff9d00" id="h-streak">🔥12</span></div>
+        </div>
+        <div style="text-align:right">
+            <small style="color:var(--p-glow)">LVL <span id="h-lvl">1</span></small>
+            <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
+        </div>
     </div>
+    <div class="world">
+        <div class="side-menu">
+            <div>
+                <div class="glass btn-circle" onclick="show('shop')">🛒<div class="btn-label">SHOP</div></div>
+                <div class="glass btn-circle" onclick="show('collect')">🃏<div class="btn-label">CARDS</div></div>
+            </div>
+            <div>
+                <div class="glass btn-circle" onclick="show('rewards')">🎁<div class="btn-label">REWARDS</div></div>
+                <div class="glass btn-circle" onclick="show('quests')">📜<div class="btn-label">QUESTS</div></div>
+            </div>
+        </div>
+        <div class="character" id="main-char">🤵</div>
+        <div class="platform"></div>
+    </div>
+    <div class="tracker-area">
+        <div class="grid-3">
+            <div class="glass node" onclick="send('mark', 'Руки', '👐')">👐</div>
+            <div class="glass node" onclick="send('mark', 'Зубы', '🦷')">🦷</div>
+            <div class="glass node" onclick="send('mark', 'Душ', '🚿')">🚿</div>
+        </div>
+    </div>
+</div>
 
-    <script>
-        // Инициализируем Telegram Web App
-        const tg = window.Telegram.WebApp;
-        tg.expand(); // Раскрываем окно
+<div id="shop" class="container">
+    <h2>🛒 МАГАЗИН</h2>
+    <div class="glass" style="padding:15px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+        <div>📦 Обычный Бокс<br><small>100 🫧</small></div>
+        <button class="glass" style="padding:10px 20px; color:var(--p-glow)" onclick="openBoxAnim('common')">КУПИТЬ</button>
+    </div>
+    <div class="glass" style="padding:15px; border-color:#ff9d00; display:flex; align-items:center; justify-content:space-between;">
+        <div>🚀 Бустер x2 XP<br><small>250 🫧 (24ч)</small></div>
+        <button class="glass" style="padding:10px 20px; color:#ff9d00" onclick="send('buy_boost', 'xp_x2', '')">КУПИТЬ</button>
+    </div>
+    <button class="glass" style="margin-top:auto; padding:15px;" onclick="show('home')">НАЗАД</button>
+</div>
 
-        function clickAction(name, icon) {
-            // 1. Вибрируем (для тактильного отклика)
-            tg.HapticFeedback.impactOccurred('medium');
+<div id="box-overlay">
+    <div id="box-visual" style="font-size:120px; cursor:pointer;" class="animate__animated">📦</div>
+    <h3 id="box-status">ТАПАЙ, ЧТОБЫ ОТКРЫТЬ!</h3>
+    <div id="box-reward" style="display:none; text-align:center;" class="animate__animated">
+        <div id="reward-icon" style="font-size:90px;">🃏</div>
+        <h2 id="reward-name">???</h2>
+        <button class="glass" style="padding:12px 40px; margin-top:20px;" onclick="closeBox()">В КОЛЛЕКЦИЮ</button>
+    </div>
+</div>
 
-            // 2. Создаем "пакет" данных для отправки
-            const result = JSON.stringify({
-                action: "mark",
-                type: name,
-                icon: icon
-            });
+<div id="collect" class="container">
+    <h2>🃏 КОЛЛЕКЦИЯ</h2>
+    <div id="cards-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; overflow-y:auto;"></div>
+    <button class="glass" style="margin-top:auto; padding:15px;" onclick="show('home')">НАЗАД</button>
+</div>
 
-            // 3. ОТПРАВЛЯЕМ БОТУ (Это самая важная команда!)
-            tg.sendData(result);
+<div class="nav">
+    <div class="nav-btn active" onclick="show('home', this)">🏠</div>
+    <div class="nav-btn" onclick="show('quests', this)">📜</div>
+    <div class="nav-btn" onclick="show('shop', this)">🛒</div>
+    <div class="nav-btn" onclick="show('collect', this)">🃏</div>
+</div>
 
-            // 4. Закрываем приложение, чтобы вернуться в чат
-            tg.close();
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    function show(id, el) {
+        document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(el) el.classList.add('active');
+        tg.HapticFeedback.selectionChanged();
+    }
+
+    function send(action, type, val) {
+        tg.HapticFeedback.impactOccurred('medium');
+        tg.sendData(JSON.stringify({action, type, val}));
+    }
+
+    // ЛОГИКА БОКСОВ И ЭФФЕКТОВ
+    function openBoxAnim(type) {
+        document.getElementById('box-overlay').style.display = 'flex';
+        const box = document.getElementById('box-visual');
+        box.className = 'animate__animated animate__pulse animate__infinite';
+        
+        box.onclick = () => {
+            box.className = 'animate__animated animate__bounceOut';
+            tg.HapticFeedback.notificationOccurred('success');
+            
+            setTimeout(() => {
+                box.style.display = 'none';
+                document.getElementById('box-status').style.display = 'none';
+                
+                // Эффект вспышки
+                const f = document.createElement('div'); f.className='screen-flash'; document.body.appendChild(f);
+                setTimeout(()=>f.remove(), 600);
+
+                const reward = document.getElementById('box-reward');
+                reward.style.display = 'block';
+                reward.className = 'animate__animated animate__backInUp';
+                
+                // Здесь мы имитируем "Легендарку" для теста анимации
+                triggerJackpot(); 
+                
+                send('box_opened', type, '');
+            }, 500);
+        };
+    }
+
+    function triggerJackpot() {
+        const layer = document.getElementById('fx-layer');
+        for(let i=0; i<30; i++) {
+            const s = document.createElement('div');
+            s.className = 'spark';
+            s.style.left = '50%'; s.style.top = '50%';
+            const x = (Math.random()-0.5)*400 + 'px';
+            const y = (Math.random()-0.5)*400 + 'px';
+            s.animate([{transform: 'translate(0,0)'}, {transform: `translate(${x},${y})`, opacity:0}], 1500);
+            layer.appendChild(s);
+            setTimeout(()=>s.remove(), 1500);
         }
-    </script>
+    }
+
+    function closeBox() {
+        document.getElementById('box-overlay').style.display = 'none';
+        document.getElementById('box-visual').style.display = 'block';
+        document.getElementById('box-status').style.display = 'block';
+        document.getElementById('box-reward').style.display = 'none';
+    }
+</script>
 </body>
 </html>
 
